@@ -135,10 +135,10 @@ class networkprops(object):
     def get_path_lengths(self):
         if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
             self.shortest_paths_lengths = nx.all_pairs_shortest_path_length(self.G)
-            self.avg_shortest_path = sum([ length for sp in shortest_paths_lengths.values() for length in sp.values() ])/float(N*(N-1))
-            self.eccentricity = nx.eccentricity(self.G,sp=shortest_paths_lengths)
-            self.diameter = nx.diameter(self.G,e=eccentricity)
-            self.radius = nx.radius(self.G,e=eccentricity)
+            self.avg_shortest_path = sum([ length for sp in self.shortest_paths_lengths.values() for length in sp.values() ])/float(self.N*(self.N-1))
+            self.eccentricity = nx.eccentricity(self.G,sp=self.shortest_paths_lengths)
+            self.diameter = nx.diameter(self.G,e=self.eccentricity)
+            self.radius = nx.radius(self.G,e=self.eccentricity)
 
         return self.shortest_paths_lengths
 
@@ -170,10 +170,9 @@ class networkprops(object):
         
         if not hasattr(self, "betweenness_centrality") or self.betweenness_centrality is None:
             self.betweenness_centrality = nx.betweenness_centrality(self.G)
-            self.mean_B = mean(self.betweenness_centrality.values()) 
             self.max_B = max(self.betweenness_centrality.values())
             self.min_B = min(self.betweenness_centrality.values())
-            self.mean_B,self.mean_B_err = self.get_mean_and_error(self.betweenness_centrality)
+            self.mean_B,self.mean_B_err = self.get_mean_and_err(self.betweenness_centrality.values())
 
         return self.betweenness_centrality, self.mean_B,self.mean_B_err
 
@@ -200,6 +199,11 @@ if __name__=="__main__":
     Bmin,Bmax = nprops.get_min_max_betweenness_centrality()
 
     path_len = nprops.get_path_lengths()
+    sp = nprops.get_avg_shortest_path()
+    
+    e = nprops.get_eccentricity()
+    d = nprops.get_diameter()
+    r = nprops.get_radius()
 
     alpha = nprops.get_largest_eigenvalue()
 
