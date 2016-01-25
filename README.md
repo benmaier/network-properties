@@ -1,4 +1,4 @@
-# Get Network Properties
+# Network Properties
 
 ## Install 
 
