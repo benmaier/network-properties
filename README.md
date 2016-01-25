@@ -1,4 +1,4 @@
-# Modular Hierarchical Random Networks
+# Get Network Properties
 
 ## Install 
 
