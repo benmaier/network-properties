@@ -6,11 +6,11 @@ import effdist
 
 class networkprops(object):
 
-    def __init__(G,to_calculate=[],use_giant_component=False,weight='weight'):
+    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight'):
 
         G_basic = G
 
-        self.NMAX = G_basix.number_of_nodes()
+        self.NMAX = G_basic.number_of_nodes()
 
         if use_giant_component:
             subgraphs = nx.connected_component_subgraphs(G_basic,copy=False)
@@ -24,6 +24,8 @@ class networkprops(object):
         self.weight = weight
 
         self.maxiter = self.N*100
+
+        self.sigma_for_eigs = 1e-10
 
 
     def calculate_all(self):
@@ -63,14 +65,14 @@ class networkprops(object):
 
     def get_smallest_laplacian_eigenvalue(self,maxiter=-1):
         
-        if self.lambda_2 is None:
-            if self.laplacian is None:
-                self.laplacian = nx.laplacian_matrix(self.G,weight=weight)
+        if not hasattr(self,"lambda_2") or self.lambda_2 is None:
+            if not hasattr(self,"laplacian") or self.laplacian is None:
+                self.laplacian = sprs.csc_matrix(nx.laplacian_matrix(self.G,weight=self.weight),dtype=float)
 
             if maxiter<=0:
                 maxiter = self.maxiter
 
-            lambda_small,_ = sprs.linalg.eigsh(L_,k=2,sigma=sigma_for_eigs,which='LM',maxiter=maxiter)
+            lambda_small,_ = sprs.linalg.eigsh(self.laplacian,k=2,sigma=self.sigma_for_eigs,which='LM',maxiter=maxiter)
 
             ind_zero = argmin(abs(lambda_small))
             lambda_small2 = delete(lambda_small,ind_zero)
@@ -83,14 +85,14 @@ class networkprops(object):
 
     def get_largest_laplacian_eigenvalue(self,maxiter=-1):
         
-        if self.lambda_max is None:
-            if self.laplacian is None:
-                self.laplacian = nx.laplacian_matrix(self.G,weight=weight)
+        if not hasattr(self,"lambda_max") or self.lambda_max is None:
+            if not hasattr(self,"laplacian") or self.laplacian is None:
+                self.laplacian = sprs.csc_matrix(nx.laplacian_matrix(self.G,weight=weight),dtype=float)
 
             if maxiter<=0:
                 maxiter = self.maxiter
 
-            lambda_large,_ = sprs.linalg.eigsh(L_,k=2,which='LM',maxiter=maxiter)
+            lambda_large,_ = sprs.linalg.eigsh(self.laplacian,k=2,which='LM',maxiter=maxiter)
             lambda_max = max(real(lambda_large))
 
             self.lambda_max = lambda_max
@@ -98,13 +100,13 @@ class networkprops(object):
         else:
             return self.lambda_max
 
-    def get_eigenratio()
+    def get_eigenratio(self):
 
-        if self.eifenratio is None:
-            if self.lambda_2 is None:
+        if not hasattr(self,"eigenratio") or self.eigenratio is None:
+            if not hasattr(self,"lambda_2") or self.lambda_2 is None:
                 self.get_smallest_laplacian_eigenvalue()
 
-            if self.lambda_max is None:
+            if not hasattr(self,"lambda_max") or self.lambda_max is None:
                 self.get_largest_laplacian_eigenvalue()
 
             self.eigenratio = self.lambda_max/self.lambda_2
@@ -114,14 +116,14 @@ class networkprops(object):
 
     def get_largest_eigenvalue(self,maxiter=-1):
 
-        if self.a_max is None:
-            if self.adjacency_matrix is None:
-                self.adjacency_matrix = nx.adjacency_matrix(self.G,weight=weight)
+        if not hasattr(self,"a_max") or self.a_max is None:
+            if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
+                self.adjacency_matrix = sprs.csc_matrix(nx.adjacency_matrix(self.G,weight=self.weight),dtype=float)
 
             if maxiter<=0:
                 maxiter = self.maxiter
 
-            a_large,_ = sprs.linalg.eigsh(A_,k=2,which='LM',maxiter=maxiter)
+            a_large,_ = sprs.linalg.eigsh(self.adjacency_matrix,k=2,which='LM',maxiter=maxiter)
             a_max = max(real(a_large))
 
             self.a_max = a_max
@@ -131,7 +133,7 @@ class networkprops(object):
             return self.a_max
 
     def get_path_lengths(self):
-        if self.shortest_path_lenghts is None:
+        if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
             self.shortest_paths_lengths = nx.all_pairs_shortest_path_length(self.G)
             self.avg_shortest_path = sum([ length for sp in shortest_paths_lengths.values() for length in sp.values() ])/float(N*(N-1))
             self.eccentricity = nx.eccentricity(self.G,sp=shortest_paths_lengths)
@@ -141,32 +143,32 @@ class networkprops(object):
         return self.shortest_paths_lengths
 
     def get_avg_shortest_path(self):
-        if self.shortest_path_lenghts is None:
+        if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
             self.get_path_lengths()
 
         return self.avg_shortest_path
         
     def get_eccentricity(self):
-        if self.shortest_path_lenghts is None:
+        if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
             self.get_path_lengths()
 
         return self.eccentricity
         
     def get_diameter(self):
-        if self.shortest_path_lenghts is None:
+        if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
             self.get_path_lengths()
 
         return self.diameter
         
     def get_radius(self):
-        if self.shortest_path_lenghts is None:
+        if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
             self.get_path_lengths()
 
         return self.radius
 
     def get_betweenness_centrality(self):
         
-        if self.betweenness_centrality is None:
+        if not hasattr(self, "betweenness_centrality") or self.betweenness_centrality is None:
             self.betweenness_centrality = nx.betweenness_centrality(self.G)
             self.mean_B = mean(self.betweenness_centrality.values()) 
             self.max_B = max(self.betweenness_centrality.values())
@@ -177,9 +179,27 @@ class networkprops(object):
 
     def get_min_max_betweenness_centrality(self):
 
-        if self.betweenness_centrality is None:
+        if not hasattr(self, "betweenness_centrality") or self.betweenness_centrality is None:
             self.get_betweenness_centrality()
 
         return self.min_B, self.max_B
 
         
+
+if __name__=="__main__":
+
+    G = nx.fast_gnp_random_graph(100,0.1)
+
+    nprops = networkprops(G)
+    neigh,mea_err = nprops.get_unique_second_neighbors()
+    effdist,mea_err = nprops.get_effective_distance()
+    lam_2 = nprops.get_smallest_laplacian_eigenvalue()
+    lam_m = nprops.get_largest_laplacian_eigenvalue()
+    eigratio = nprops.get_eigenratio()
+    Bstuff = nprops.get_betweenness_centrality()
+    Bmin,Bmax = nprops.get_min_max_betweenness_centrality()
+
+    path_len = nprops.get_path_lengths()
+
+    alpha = nprops.get_largest_eigenvalue()
+
