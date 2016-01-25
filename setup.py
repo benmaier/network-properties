@@ -13,5 +13,6 @@ setup(name='networkprops',
           'scipy',
           'networkx',
           'python-louvain',
+          'effective-distance',
       ],
       zip_safe=False)
