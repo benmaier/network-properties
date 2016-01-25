@@ -3,6 +3,7 @@ import scipy.sparse as sprs
 from numpy import *
 import time
 import effdist
+from networkprops import stability_analysis
 
 class networkprops(object):
 
@@ -53,6 +54,18 @@ class networkprops(object):
 
         return res, self.get_mean_and_err(res)
 
+    def get_laplacian(self):
+        if not hasattr(self,"laplacian"):
+            self.laplacian = sprs.csc_matrix(nx.laplacian_matrix(self.G,weight=self.weight),dtype=float)
+
+        return self.laplacian
+
+    def get_adjacency_matrix(self):
+        if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
+            self.adjacency_matrix = sprs.csc_matrix(nx.adjacency_matrix(self.G,weight=self.weight),dtype=float)
+
+        return self.adjacency_matrix
+
     def get_effective_distance(self):
         P = effdist.get_probability_graph(self.G,for_effdist=True)
         res = effdist.get_mean_effdist(self.G,with_error=True,get_all=True)
@@ -67,7 +80,7 @@ class networkprops(object):
         
         if not hasattr(self,"lambda_2") or self.lambda_2 is None:
             if not hasattr(self,"laplacian") or self.laplacian is None:
-                self.laplacian = sprs.csc_matrix(nx.laplacian_matrix(self.G,weight=self.weight),dtype=float)
+                self.get_laplacian()
 
             if maxiter<=0:
                 maxiter = self.maxiter
@@ -87,7 +100,7 @@ class networkprops(object):
         
         if not hasattr(self,"lambda_max") or self.lambda_max is None:
             if not hasattr(self,"laplacian") or self.laplacian is None:
-                self.laplacian = sprs.csc_matrix(nx.laplacian_matrix(self.G,weight=weight),dtype=float)
+                self.get_laplacian()
 
             if maxiter<=0:
                 maxiter = self.maxiter
@@ -118,7 +131,7 @@ class networkprops(object):
 
         if not hasattr(self,"a_max") or self.a_max is None:
             if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
-                self.adjacency_matrix = sprs.csc_matrix(nx.adjacency_matrix(self.G,weight=self.weight),dtype=float)
+                self.get_adjacency_matrix()
 
             if maxiter<=0:
                 maxiter = self.maxiter
@@ -183,13 +196,33 @@ class networkprops(object):
 
         return self.min_B, self.max_B
 
+    def stability_analysis(self,sigma,N_measurements=1):
+        
+        j_max = zeros(N_measurements)
+
+        for meas in range(N_measurements):
+            if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
+                self.get_adjacency_matrix()
+
+            stab_ana = stability_analysis(self.adjacency_matrix,sigma)
+
+            stab_ana.fill_jacobian()
+
+            j_max[meas] = stab_ana.get_largest_realpart_eigenvalue()
+
+        if N_measurements>1:
+            return self.get_mean_and_err(j_max)
+        else:
+            return jmax[0]
+
         
 
 if __name__=="__main__":
+    import mhrn
 
-    G = nx.fast_gnp_random_graph(100,0.1)
+    G = mhrn.fast_mhr_graph(B=10,L=3,k=8,xi=1.4)
 
-    nprops = networkprops(G)
+    nprops = networkprops(G,use_giant_component=True)
     neigh,mea_err = nprops.get_unique_second_neighbors()
     effdist,mea_err = nprops.get_effective_distance()
     lam_2 = nprops.get_smallest_laplacian_eigenvalue()
@@ -206,4 +239,7 @@ if __name__=="__main__":
     r = nprops.get_radius()
 
     alpha = nprops.get_largest_eigenvalue()
+
+    jmax,jerr = nprops.stability_analysis(0.15,10)
+    print jmax, jerr
 

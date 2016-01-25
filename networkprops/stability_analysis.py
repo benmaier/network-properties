@@ -1,4 +1,4 @@
-from __future__ import print
+from __future__ import print_function
 from networkprops import *
 import networkx as nx
 from numpy import *
@@ -9,9 +9,9 @@ from numpy.random import normal
 
 class stability_analysis(object):
 
-    def __init__(self.A,sigma,mixing_gauss_delta=1.):
+    def __init__(self,A,sigma,mixing_gauss_delta=1.):
 
-        if mixing_gauss_delta!=1.:
+        if not mixing_gauss_delta==1.:
             print("mixing not yet implemented!")
             sys.exit(1)
 
@@ -22,7 +22,7 @@ class stability_analysis(object):
 
         self.sigma = sigma
 
-    def fill_jacobian(self)
+    def fill_jacobian(self):
 
         row,col = self.A.nonzero()
 
@@ -37,14 +37,14 @@ class stability_analysis(object):
 
         self.j_max = None
 
-    def get_largest_real_eigenvalue(self,maxiter=-1):
+    def get_largest_realpart_eigenvalue(self,maxiter=-1):
 
         if self.j_max is None:
 
             if maxiter<=0:
                 maxiter = self.maxiter
 
-            j_large,_ = sprs.linalg.eigsh(self.J,k=2,which='LR',maxiter=maxiter)
-            j_max = max(real(j_large))
+            j_large,_ = sprs.linalg.eigs(self.J,k=2,which='LR',maxiter=maxiter)
+            self.j_max = max(real(j_large))
 
         return self.j_max
