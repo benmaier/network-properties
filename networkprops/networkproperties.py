@@ -229,7 +229,7 @@ class networkprops(object):
 if __name__=="__main__":
     import mhrn
 
-    G = mhrn.fast_mhr_graph(B=10,L=3,k=7,xi=1.4)
+    G = mhrn.fast_mhr_graph(B=10,L=1,k=7,xi=1.4)
 
     nprops = networkprops(G,use_giant_component=True)
     neigh,mea_err = nprops.get_unique_second_neighbors()

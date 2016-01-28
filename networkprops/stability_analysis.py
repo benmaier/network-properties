@@ -52,6 +52,7 @@ class stability_analysis(object):
         data[lower_triangle] = -abs(normal(scale=self.sigma,size=len(lower_triangle)))
 
         self.J = sprs.csc_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N)
+        
 
         self.j_max = None
 
@@ -71,6 +72,8 @@ class stability_analysis(object):
 
         self.J = sprs.csr_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N,dtype=float)
 
+        #for ndx in upper_triangle:
+        #    print("===",self.J[row[ndx],col[ndx]], self.J[col[ndx],row[ndx]])
 
         self.j_max = None
 
