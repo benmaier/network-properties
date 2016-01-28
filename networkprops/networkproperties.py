@@ -4,6 +4,7 @@ from numpy import *
 import time
 import effdist
 from networkprops import stability_analysis
+import sys
 
 class networkprops(object):
 
@@ -196,7 +197,7 @@ class networkprops(object):
 
         return self.min_B, self.max_B
 
-    def stability_analysis(self,sigma,N_measurements=1):
+    def stability_analysis(self,sigma,N_measurements=1,mode="random"):
         
         j_max = zeros(N_measurements)
 
@@ -206,21 +207,29 @@ class networkprops(object):
 
             stab_ana = stability_analysis(self.adjacency_matrix,sigma)
 
-            stab_ana.fill_jacobian()
+            if mode=="random":
+                stab_ana.fill_jacobian_random()
+            elif mode=="predatorprey":
+                stab_ana.fill_jacobian_predator_prey()
+            elif mode=="mutualistic":
+                stab_ana.fill_jacobian_mutualistic()
+            else: 
+                print "Mode",mode,"not known."
+                sys.exit(1)
 
             j_max[meas] = stab_ana.get_largest_realpart_eigenvalue()
 
         if N_measurements>1:
             return self.get_mean_and_err(j_max)
         else:
-            return jmax[0]
+            return j_max[0]
 
         
 
 if __name__=="__main__":
     import mhrn
 
-    G = mhrn.fast_mhr_graph(B=10,L=3,k=8,xi=1.4)
+    G = mhrn.fast_mhr_graph(B=10,L=3,k=7,xi=1.4)
 
     nprops = networkprops(G,use_giant_component=True)
     neigh,mea_err = nprops.get_unique_second_neighbors()
@@ -242,4 +251,11 @@ if __name__=="__main__":
 
     jmax,jerr = nprops.stability_analysis(0.15,10)
     print jmax, jerr
+
+    jmax,jerr = nprops.stability_analysis(0.15,10,mode="mutualistic")
+    print jmax, jerr
+
+    jmax,jerr = nprops.stability_analysis(0.15,10,mode="predatorprey")
+    print jmax, jerr
+
 

@@ -9,7 +9,7 @@ from numpy.random import normal
 
 class stability_analysis(object):
 
-    def __init__(self,A,sigma,mixing_gauss_delta=1.):
+    def __init__(self,A,sigma,self_interaction=1.,mixing_gauss_delta=1.):
 
         if not mixing_gauss_delta==1.:
             print("mixing not yet implemented!")
@@ -18,11 +18,14 @@ class stability_analysis(object):
         self.A = A.tolil()
         self.N = self.A.shape[0]
         self.node_indices = arange(self.N)
-        self.maxiter = self.N*100
+        self.maxiter = self.N*1000
 
         self.sigma = sigma
 
-    def fill_jacobian(self):
+        #this goes onto the diagonal 
+        self.self_interaction = self_interaction 
+
+    def fill_jacobian_random(self):
 
         row,col = self.A.nonzero()
 
@@ -36,6 +39,41 @@ class stability_analysis(object):
         del J
 
         self.j_max = None
+
+    def fill_jacobian_predator_prey(self):
+
+        row,col = self.A.nonzero()
+        data = empty_like(row,dtype=float)
+
+        upper_triangle = nonzero(row<col)[0]
+        lower_triangle = nonzero(row>col)[0]
+
+        data[upper_triangle] = abs(normal(scale=self.sigma,size=len(upper_triangle)))
+        data[lower_triangle] = -abs(normal(scale=self.sigma,size=len(lower_triangle)))
+
+        self.J = sprs.csc_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N)
+
+        self.j_max = None
+
+    def fill_jacobian_mutualistic(self):
+
+        row,col = self.A.nonzero()
+        data = zeros_like(row,dtype=float)
+
+        upper_triangle = nonzero(row<col)[0]
+        lower_triangle = nonzero(row>col)[0]
+
+        data[upper_triangle] = normal(scale=self.sigma,size=len(upper_triangle))
+        self.J = sprs.csr_matrix((data,(row,col)),dtype=float)
+
+        signs = array([ sign(self.J[col[ndx],row[ndx]]) for ndx in lower_triangle ])
+        data[lower_triangle] = signs * abs(normal(scale=self.sigma,size=len(lower_triangle)))
+
+        self.J = sprs.csr_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N,dtype=float)
+
+
+        self.j_max = None
+
 
     def get_largest_realpart_eigenvalue(self,maxiter=-1):
 
