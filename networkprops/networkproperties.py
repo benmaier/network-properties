@@ -29,6 +29,8 @@ class networkprops(object):
 
         self.sigma_for_eigs = 1e-10
 
+        self.get_eigenratio()        
+
 
     def calculate_all(self):
         pass

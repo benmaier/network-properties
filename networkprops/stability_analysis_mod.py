@@ -78,6 +78,13 @@ class stability_analysis(object):
         self.j_max = None
 
 
+    def fill_jacobian_proportions(self):
+        pass
+
+         
+
+
+
     def get_largest_realpart_eigenvalue(self,maxiter=-1):
 
         if self.j_max is None:

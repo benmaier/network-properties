@@ -1,2 +1,2 @@
+from .stability_analysis_mod import *
 from .networkproperties import *
-from .stability_analysis import *

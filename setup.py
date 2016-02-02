@@ -1,7 +1,7 @@
 from setuptools import setup
 
 setup(name='networkprops',
-      version='0.1',
+      version='0.11',
       description='Compute a bunch of network properties for a given graph',
       url='https://github.com/benmaier/Get-Network-Properties',
       author='Benjamin F. Maier',
