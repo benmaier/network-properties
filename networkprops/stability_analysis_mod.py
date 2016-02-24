@@ -104,9 +104,6 @@ class stability_analysis(object):
             if tol<0.:
                 tol = self.tol
 
-
-            print(tol)
-
             j_large,_ = sprs.linalg.eigs(self.J,k=2,which='LR',maxiter=maxiter,tol=tol)
             self.j_max = max(real(j_large))
 
