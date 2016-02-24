@@ -9,7 +9,7 @@ from numpy.random import normal
 
 class stability_analysis(object):
 
-    def __init__(self,A,sigma,self_interaction=1.,mixing_gauss_delta=1.):
+    def __init__(self,A,sigma,self_interaction=1.,mixing_gauss_delta=1.,maxiter=None):
 
         if not mixing_gauss_delta==1.:
             print("mixing not yet implemented!")
@@ -18,7 +18,11 @@ class stability_analysis(object):
         self.A = A.tolil()
         self.N = self.A.shape[0]
         self.node_indices = arange(self.N)
-        self.maxiter = self.N*1000
+
+        if maxiter is None:
+            self.maxiter = self.N*1000
+        else:
+            self.maxiter = maxiter
 
         self.sigma = sigma
 
@@ -96,3 +100,5 @@ class stability_analysis(object):
             self.j_max = max(real(j_large))
 
         return self.j_max
+
+
