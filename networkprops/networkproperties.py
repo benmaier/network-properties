@@ -205,9 +205,9 @@ class networkprops(object):
 
         for meas in range(N_measurements):
             if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
-                self.get_adjacency_matrix()
+                A = self.get_adjacency_matrix()
 
-            stab_ana = stability_analysis(self.adjacency_matrix,sigma,maxiter)
+            stab_ana = stability_analysis(A,sigma,maxiter=maxiter)
 
             if mode=="random":
                 stab_ana.fill_jacobian_random()
