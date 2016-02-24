@@ -199,7 +199,7 @@ class networkprops(object):
 
         return self.min_B, self.max_B
 
-    def stability_analysis(self,sigma,N_measurements=1,mode="random"):
+    def stability_analysis(self,sigma,N_measurements=1,mode="random",maxiter=None):
         
         j_max = zeros(N_measurements)
 
@@ -207,7 +207,7 @@ class networkprops(object):
             if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
                 self.get_adjacency_matrix()
 
-            stab_ana = stability_analysis(self.adjacency_matrix,sigma)
+            stab_ana = stability_analysis(self.adjacency_matrix,sigma,maxiter)
 
             if mode=="random":
                 stab_ana.fill_jacobian_random()
