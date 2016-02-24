@@ -199,15 +199,15 @@ class networkprops(object):
 
         return self.min_B, self.max_B
 
-    def stability_analysis(self,sigma,N_measurements=1,mode="random",maxiter=None):
+    def stability_analysis(self,sigma,N_measurements=1,mode="random",maxiter=None,tol=-1.):
         
         j_max = zeros(N_measurements)
 
         for meas in range(N_measurements):
             if not hasattr(self,"adjacency_matrix") or self.adjacency_matrix is None:
-                A = self.get_adjacency_matrix()
+                self.get_adjacency_matrix()
 
-            stab_ana = stability_analysis(A,sigma,maxiter=maxiter)
+            stab_ana = stability_analysis(self.get_adjacency_matrix(),sigma,maxiter=maxiter,tol=tol)
 
             if mode=="random":
                 stab_ana.fill_jacobian_random()
@@ -231,7 +231,7 @@ class networkprops(object):
 if __name__=="__main__":
     import mhrn
 
-    G = mhrn.fast_mhr_graph(B=10,L=1,k=7,xi=1.4)
+    G = mhrn.fast_mhr_graph(B=10,L=2,k=7,xi=1.4)
 
     nprops = networkprops(G,use_giant_component=True)
     neigh,mea_err = nprops.get_unique_second_neighbors()
@@ -251,13 +251,13 @@ if __name__=="__main__":
 
     alpha = nprops.get_largest_eigenvalue()
 
-    jmax,jerr = nprops.stability_analysis(0.15,10)
+    jmax,jerr = nprops.stability_analysis(0.15,10,tol=1e-2)
     print jmax, jerr
 
-    jmax,jerr = nprops.stability_analysis(0.15,10,mode="mutualistic")
+    jmax,jerr = nprops.stability_analysis(0.15,10,mode="mutualistic",tol=1e-2)
     print jmax, jerr
 
-    jmax,jerr = nprops.stability_analysis(0.15,10,mode="predatorprey")
+    jmax,jerr = nprops.stability_analysis(0.15,10,mode="predatorprey",maxiter=20000,tol=1e-2)
     print jmax, jerr
 
 
