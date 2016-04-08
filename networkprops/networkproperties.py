@@ -5,6 +5,7 @@ import time
 import effdist
 from networkprops import stability_analysis
 import sys
+from collections import Counter
 
 class networkprops(object):
 
@@ -29,7 +30,7 @@ class networkprops(object):
 
         self.sigma_for_eigs = 1e-10
 
-        self.get_eigenratio()        
+        #self.get_eigenratio()        
 
 
     def calculate_all(self):
@@ -129,6 +130,36 @@ class networkprops(object):
 
         return self.eigenratio
 
+    def get_laplacian_eigenvalues(self):
+
+        if not hasattr(self,"laplacian_eigenvalues") or self.laplacian_eigenvalues is not None:
+            L = self.get_laplacian().todense()
+            self.laplacian_eigenvalues = linalg.eigvalsh(L)
+
+        return self.laplacian_eigenvalues
+
+    def get_laplacian_eigenvalue_distribution(self,bins=20):
+
+        if not hasattr(self,"laplacian_eigenvalues") or self.laplacian_eigenvalues is not None:
+            lambdas = self.get_laplacian_eigenvalues()
+
+        return histogram(lambdas,bins=bins,normed=True)
+
+    def get_eigenvalues(self):
+
+        if not hasattr(self,"eigenvalues") or self.eigenvalues is not None:
+            A = self.get_adjacency_matrix().todense()
+            self.eigenvalues = linalg.eigvals(A)
+
+        return self.eigenvalues
+
+    def get_eigenvalue_distribution(self,bins=20):
+
+        if not hasattr(self,"eigenvalues") or self.eigenvalues is not None:
+            alphas = self.get_eigenvalues()
+
+        return histogram(alphas,bins=bins,normed=True)
+
 
     def get_largest_eigenvalue(self,maxiter=-1):
 
@@ -226,10 +257,22 @@ class networkprops(object):
         else:
             return j_max[0]
 
+    def get_degree_distribution(self,k_min=0):
+        degrees = self.G.degree().values()
+        dist = Counter(degrees)
+        k_min = 0
+        k_max = max(degrees)
+        ks = arange(k_min,k_max+1)
+        vals = array([dist[k] for k in ks])
+
+        return ks,vals
+
         
 
 if __name__=="__main__":
     import mhrn
+    import pylab as pl
+    import seaborn as sns
 
     G = mhrn.fast_mhr_graph(B=10,L=2,k=7,xi=1.4)
 
@@ -250,6 +293,10 @@ if __name__=="__main__":
     r = nprops.get_radius()
 
     alpha = nprops.get_largest_eigenvalue()
+
+    vals,bars = nprops.get_laplacian_eigenvalue_distribution()
+    pl.step(bars[:-1],vals)
+    pl.show()
 
     jmax,jerr = nprops.stability_analysis(0.15,10,tol=1e-2)
     print jmax, jerr
