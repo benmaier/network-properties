@@ -6,11 +6,13 @@ import effdist
 from networkprops import stability_analysis
 import sys
 from collections import Counter
+from scipy.sparse.linalg.eigen.arpack.arpack import ArpackNoConvergence
 
 class networkprops(object):
 
-    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight'):
+    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight',catch_convergence_error=False):
 
+        self.catch_convergence_error = catch_convergence_error
         G_basic = G
 
         self.NMAX = G_basic.number_of_nodes()
@@ -89,7 +91,15 @@ class networkprops(object):
             if maxiter<=0:
                 maxiter = self.maxiter
 
-            lambda_small,_ = sprs.linalg.eigsh(self.laplacian,k=2,sigma=self.sigma_for_eigs,which='LM',maxiter=maxiter)
+            if self.catch_convergence_error:
+                try:
+                    lambda_small,_ = sprs.linalg.eigsh(self.laplacian,k=2,sigma=self.sigma_for_eigs,which='LM',maxiter=maxiter)
+                except ArpackNoConvergence as e:
+                    return None
+            else:
+                lambda_small,_ = sprs.linalg.eigsh(self.laplacian,k=2,sigma=self.sigma_for_eigs,which='LM',maxiter=maxiter)
+
+
 
             ind_zero = argmin(abs(lambda_small))
             lambda_small2 = delete(lambda_small,ind_zero)
@@ -267,7 +277,17 @@ class networkprops(object):
 
         return ks,vals
 
-        
+    def get_clustering_by_degree(self,get_mean_by_degree=False):
+        deg = self.G.degree().values()
+        C_ = nx.clustering(self.G)
+        k = zeros((self.N,))
+        C = zeros((self.N,))
+        for i,node in enumerate(self.G.nodes()):
+            k[i] = deg[node]
+            C[i] = C_[node]
+
+        return k, C
+
 
 if __name__=="__main__":
     import mhrn
