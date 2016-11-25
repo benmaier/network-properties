@@ -110,6 +110,42 @@ class networkprops(object):
         else:
             return self.lambda_2
 
+    def get_n_smallest_laplacian_eigenvalues(self,n,maxiter=-1):
+
+        if not hasattr(self,"lambda_smallest") or self.lambda_smallest is None:
+            if not hasattr(self,"laplacian") or self.laplacian is None:
+                self.get_laplacian()
+
+            if maxiter<=0:
+                maxiter = self.maxiter
+
+            if self.catch_convergence_error:
+                try:
+                    lambda_small,_ = sprs.linalg.eigsh(self.laplacian,k=n+1,sigma=self.sigma_for_eigs,which='LM',maxiter=maxiter)
+                except ArpackNoConvergence as e:
+                    return None
+            else:
+                lambda_small,_ = sprs.linalg.eigsh(self.laplacian,k=n+1,sigma=self.sigma_for_eigs,which='LM',maxiter=maxiter)
+
+            ind_zero = argmin(abs(lambda_small))
+            lambda_small2 = delete(lambda_small,ind_zero)
+            self.lambda_2 = min(lambda_small2)
+            self.lambda_smallest = lambda_small2
+
+            return self.lambda_smallest
+        else:
+            return self.lambda_smallest
+
+    def get_largest_laplacian_eigenvalue(self,maxiter=-1):
+        
+        if not hasattr(self,"lambda_max") or self.lambda_max is None:
+            if not hasattr(self,"laplacian") or self.laplacian is None:
+                self.get_laplacian()
+
+            if maxiter<=0:
+                maxiter = self.maxiter
+
+
     def get_largest_laplacian_eigenvalue(self,maxiter=-1):
         
         if not hasattr(self,"lambda_max") or self.lambda_max is None:
