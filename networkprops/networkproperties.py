@@ -29,7 +29,7 @@ class networkprops(object):
 
         self.weight = weight
 
-        if self.maxiter <= 0:
+        if maxiter <= 0:
             self.maxiter = self.N*100
         else:
             self.maxiter = maxiter
