@@ -11,7 +11,7 @@ from scipy.sparse.linalg.eigen.arpack.arpack import ArpackNoConvergence
 
 class networkprops(object):
 
-    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight',catch_convergence_error=False):
+    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight',catch_convergence_error=False,maxiter=-1):
 
         self.catch_convergence_error = catch_convergence_error
         G_basic = G
@@ -29,7 +29,10 @@ class networkprops(object):
 
         self.weight = weight
 
-        self.maxiter = self.N*100
+        if self.maxiter <= 0:
+            self.maxiter = self.N*100
+        else:
+            self.maxiter = maxiter
 
         self.sigma_for_eigs = 1e-10
 
@@ -136,16 +139,6 @@ class networkprops(object):
             return self.lambda_smallest
         else:
             return self.lambda_smallest
-
-    def get_largest_laplacian_eigenvalue(self,maxiter=-1):
-        
-        if not hasattr(self,"lambda_max") or self.lambda_max is None:
-            if not hasattr(self,"laplacian") or self.laplacian is None:
-                self.get_laplacian()
-
-            if maxiter<=0:
-                maxiter = self.maxiter
-
 
     def get_largest_laplacian_eigenvalue(self,maxiter=-1):
         
