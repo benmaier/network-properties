@@ -1,6 +1,7 @@
 import networkx as nx
 import scipy.sparse as sprs
 from numpy import *
+import numpy as np
 import time
 import effdist
 from networkprops import stability_analysis
@@ -176,13 +177,16 @@ class networkprops(object):
 
         return self.eigenratio
 
-    def get_laplacian_eigenvalues(self):
+    def get_laplacian_eigenvalues(self,with_eigenvectors=False):
 
-        if not hasattr(self,"laplacian_eigenvalues") or self.laplacian_eigenvalues is not None:
-            L = self.get_laplacian().todense()
-            self.laplacian_eigenvalues = linalg.eigvalsh(L)
+        if not hasattr(self,"laplacian_eigenvalues") or self.laplacian_eigenvalues is None:
+            L = self.get_laplacian().toarray()
+            self.laplacian_eigenvalues, self.laplacian_eigenvectors = linalg.eigh(L)
 
-        return self.laplacian_eigenvalues
+        if with_eigenvectors:
+            return self.laplacian_eigenvalues, self.laplacian_eigenvectors
+        else:
+            return self.laplacian_eigenvalues
 
     def get_laplacian_eigenvalue_distribution(self,bins=20):
 
@@ -191,13 +195,136 @@ class networkprops(object):
 
         return histogram(lambdas,bins=bins,normed=True)
 
-    def get_eigenvalues(self):
+    def get_mean_first_passage_times_inverse_method(self,target,L=None,A=None,k=None):
+
+        assert target < self.N
+        assert target >= 0
+
+        if L is None:
+            L = self.get_laplacian()
+        if A is None:
+            A = self.get_adjacency_matrix()
+        if k is None:
+            k = np.array(A.sum(axis=1)).ravel()
+
+        relevant_indices = np.concatenate(( np.arange(target), np.arange(target+1,self.N) ))
+
+        L_prime = L[relevant_indices,:]
+        L_prime = L_prime[:,relevant_indices]
+
+        L_prime_inv = sprs.linalg.inv(L_prime)
+
+        #Lambda = sprs.lil_matrix((self.N,self.N))
+
+        #Lambda[:target,:target] = L_prime_inv[:target]
+
+        tau = np.zeros((self.N,))
+
+        #print L_prime_inv.T[target:,target:].shape, k[target+1:].shape
+        #print L_prime_inv.T[:target,:target].shape, k[:target].shape
+
+        if target == 0:
+            tau[target+1:] += np.array(L_prime_inv.T[target:,target:].dot(k[target+1:])).ravel()
+        elif target == self.N-1:
+            tau[:target]  = np.array(L_prime_inv.T[:target,:target].dot(k[:target])).ravel()
+        else:
+            tau[:target]  = np.array(L_prime_inv.T[:target,:target].dot(k[:target])).ravel()
+            tau[:target] += np.array(L_prime_inv.T[:target,target:].dot(k[target+1:])).ravel()
+            tau[target+1:]  = np.array(L_prime_inv.T[target:,:target].dot(k[:target])).ravel()
+            tau[target+1:] += np.array(L_prime_inv.T[target:,target:].dot(k[target+1:])).ravel()
+
+        #for source in xrange(target):
+        #    tau[source] = L_prime_inv.T.dot(k)
+
+        return tau
+
+    def get_mean_first_passage_times_for_all_targets_eigenvalue_method(self):
+        k = np.array(self.get_adjacency_matrix().sum(axis=1)).ravel()
+        lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
+        lambdas = lambdas[1:]
+
+        # put eigenvectors as row vectors and disregard the first one
+        # (corresponding to eigenvalue 0)
+        mu = mus.T[1:,:]
+        lambda_inv = 1./lambdas
+
+        # Eq. (14) from https://arxiv.org/pdf/1209.6165v1.pdf
+        T = self.N/(self.N-1.) * lambda_inv.dot( 2*self.m * mu**2 - mu*( mu.dot(k)[:,None] ) )
+
+        return T
+
+    def get_effective_resistance(self,source,target,mu=None,lambda_inv=None):
+
+        if mu is None and lambda_inv is None:
+
+            # get eigenvalues and eigenvectors
+            lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
+            lambdas = lambdas[1:]
+
+            # put eigenvectors as row vectors and disregard the first one
+            # (corresponding to eigenvalue 0)
+            mu = mus.T[1:,:]
+            lambda_inv = 1./lambdas
+
+        R = lambda_inv.dot( (mu[:,source]-mu[:,target])**2 )
+
+        return R 
+
+    def get_mean_effective_resistance(self,build_mean_over_two_point_values=False):
+
+        # get eigenvalues and eigenvectors
+        lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
+        lambdas = lambdas[1:]
+
+        # put eigenvectors as row vectors and disregard the first one
+        # (corresponding to eigenvalue 0)
+        mu = mus.T[1:,:]
+        lambda_inv = 1./lambdas
+
+        if build_mean_over_two_point_values:
+            R = 0.
+            for source in xrange(self.N-1):
+                for target in xrange(source+1,self.N):
+                    R += self.get_effective_resistance(source,target,lambda_inv=lambda_inv,mu=mu)
+
+            return R / self.N
+        else:
+            return lambda_inv.sum()
+
+        
+    def get_mean_mean_first_passage_time(self,use_inverse_method=False):
+
+        if use_inverse_method:
+            L = self.get_laplacian()
+            A = self.get_adjacency_matrix()
+            k = np.array(A.sum(axis=1)).ravel()
+
+            mean_tau = 0.
+
+            for target in xrange(self.N): 
+                tau = self.get_mean_first_passage_times_inverse_method(target,L,A,k)
+
+                mean_tau += tau.sum()
+
+            # norm by number of double counted pairs
+            mean_tau /= self.N*(self.N-1)
+
+            # This is a mean over all pairs. However, every pair has been counted twice
+            return mean_tau / 2.
+        else:
+            # This is a mean over all pairs. However, every pair has been counted twice
+            return np.mean(self.get_mean_first_passage_times_for_all_targets_eigenvalue_method()) / 2.
+
+    def get_eigenvalues(self,with_eigenvectors=False):
 
         if not hasattr(self,"eigenvalues") or self.eigenvalues is not None:
-            A = self.get_adjacency_matrix().todense()
-            self.eigenvalues = linalg.eigvals(A)
+            A = self.get_adjacency_matrix().toarray()
+            self.eigenvalues, self.eigenvectors = linalg.eigh(A)
 
-        return self.eigenvalues
+        if with_eigenvectors:
+            return self.eigenvalues, self.eigenvectors
+        else:
+            return self.eigenvalues
 
     def get_eigenvalue_distribution(self,bins=20):
 
@@ -329,6 +456,10 @@ if __name__=="__main__":
     import mhrn
     import pylab as pl
     import seaborn as sns
+    from nwDiff import ErgodicDiffusion
+
+    test_stability = False
+    test_mean_tau = True
 
     G = mhrn.fast_mhr_graph(B=10,L=2,k=7,xi=1.4)
 
@@ -354,13 +485,45 @@ if __name__=="__main__":
     pl.step(bars[:-1],vals)
     pl.show()
 
-    jmax,jerr = nprops.stability_analysis(0.15,10,tol=1e-2)
-    print jmax, jerr
+    if test_stability:
 
-    jmax,jerr = nprops.stability_analysis(0.15,10,mode="mutualistic",tol=1e-2)
-    print jmax, jerr
+        jmax,jerr = nprops.stability_analysis(0.15,10,tol=1e-2)
+        print jmax, jerr
 
-    jmax,jerr = nprops.stability_analysis(0.15,10,mode="predatorprey",maxiter=20000,tol=1e-2)
-    print jmax, jerr
+        jmax,jerr = nprops.stability_analysis(0.15,10,mode="mutualistic",tol=1e-2)
+        print jmax, jerr
+
+        jmax,jerr = nprops.stability_analysis(0.15,10,mode="predatorprey",maxiter=20000,tol=1e-2)
+        print jmax, jerr
+
+    if test_mean_tau:
+        #r, h = 3, 3 
+        #G = nx.balanced_tree(r,h)
+        props = networkprops(G)
+
+        tau = props.get_mean_mean_first_passage_time(use_inverse_method=True)
+        print "inverse laplacian method mean tau =", tau
+
+        tau = props.get_mean_effective_resistance()
+        print "tree laplacian eigenvalue method mean tau =", tau
+
+        tau = props.get_mean_mean_first_passage_time()
+        print "general laplacian eigenvalue method mean tau =", tau
+
+        diff = ErgodicDiffusion(G)
+
+        N_meas = 10
+        tau = 0.
+        for meas in xrange(N_meas):
+            MFPT, coverage_time = diff.simulate_for_MFPT_and_coverage_time()
+            tau += diff.get_mean_MFPT()
+        tau /= N_meas
+
+        print "simulated mean tau =", tau
+
+        print "mean effective resistance =", props.get_mean_effective_resistance(build_mean_over_two_point_values=True)
+
+
+
 
 
