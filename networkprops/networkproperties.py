@@ -278,11 +278,12 @@ class networkprops(object):
             R = 0.
             for source in xrange(self.N-1):
                 for target in xrange(source+1,self.N):
-                    R += self.get_effective_resistance(source,target,lambda_inv=lambda_inv,mu=mu)
+                    if source != target:
+                        R += self.get_effective_resistance(source,target,lambda_inv=lambda_inv,mu=mu)
 
-            return R / self.N
+            return R / self.N / (self.N-1.) 
         else:
-            return lambda_inv.sum()
+            return lambda_inv.sum() / (self.N-1.)
 
         
     def get_mean_mean_first_passage_time(self,use_inverse_method=False):
@@ -303,10 +304,10 @@ class networkprops(object):
             mean_tau /= self.N*(self.N-1)
 
             # This is a mean over all pairs. However, every pair has been counted twice
-            return mean_tau / 2.
+            return mean_tau
         else:
             # This is a mean over all pairs. However, every pair has been counted twice
-            return np.mean(self.get_mean_first_passage_times_for_all_targets_eigenvalue_method()) / 2.
+            return np.mean(self.get_mean_first_passage_times_for_all_targets_eigenvalue_method())
 
     def get_eigenvalues(self,with_eigenvectors=False):
 
@@ -476,7 +477,6 @@ if __name__=="__main__":
 
     vals,bars = nprops.get_laplacian_eigenvalue_distribution()
     pl.step(bars[:-1],vals)
-    pl.show()
 
     if test_stability:
 
@@ -490,8 +490,8 @@ if __name__=="__main__":
         print jmax, jerr
 
     if test_mean_tau:
-        #r, h = 3, 3 
-        #G = nx.balanced_tree(r,h)
+        r, h = 3, 3 
+        G = nx.balanced_tree(r,h)
         props = networkprops(G)
 
         tau = props.get_mean_mean_first_passage_time(use_inverse_method=True)
@@ -509,14 +509,17 @@ if __name__=="__main__":
         tau = 0.
         for meas in xrange(N_meas):
             MFPT, coverage_time = diff.simulate_for_MFPT_and_coverage_time()
+            #fig,ax = pl.subplots(1,1)
+            #ax.hist(MFPT.flatten(),bins=np.arange(min(MFPT.flatten()), max(MFPT.flatten()) + 5, 5))
             tau += diff.get_mean_MFPT()
         tau /= N_meas
 
         print "simulated mean tau =", tau
 
-        print "mean effective resistance =", props.get_mean_effective_resistance(build_mean_over_two_point_values=True)
+        print "mean effective resistance (over two point) =", props.get_mean_effective_resistance(build_mean_over_two_point_values=True)
 
 
+    pl.show()
 
 
 
