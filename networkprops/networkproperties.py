@@ -26,8 +26,8 @@ class networkprops(object):
         else:
             self.G = G_basic
 
-        self.N = G.number_of_nodes()
-        self.m = G.number_of_edges()
+        self.N = self.G.number_of_nodes()
+        self.m = self.G.number_of_edges()
 
         self.weight = weight
 
