@@ -80,7 +80,7 @@ class networkprops(object):
 
     def get_effective_distance(self):
         P = effdist.get_probability_graph(self.G,for_effdist=True)
-        res = effdist.get_mean_effdist(self.G,with_error=True,get_all=True)
+        res = effdist.get_mean_effdist(P,with_error=False,get_all=True)
 
         return res, self.get_mean_and_err(res)
 
