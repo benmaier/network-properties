@@ -11,7 +11,7 @@ from scipy.sparse.linalg.eigen.arpack.arpack import ArpackNoConvergence
 
 class networkprops(object):
 
-    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight',catch_convergence_error=False,maxiter=-1):
+    def __init__(self,G,to_calculate=[],use_giant_component=False,weight='weight',catch_convergence_error=False,maxiter=-1,relabel_giant_component_to_integers=True):
 
         self.catch_convergence_error = catch_convergence_error
         G_basic = G
@@ -21,6 +21,8 @@ class networkprops(object):
         if use_giant_component:
             subgraphs = nx.connected_component_subgraphs(G_basic,copy=False)
             self.G = max(subgraphs, key=len)
+            if relabel_giant_component_to_integers:
+                self.G = nx.convert_node_labels_to_integers(self.G)
         else:
             self.G = G_basic
 
@@ -444,6 +446,10 @@ class networkprops(object):
             C[i] = C_[node]
 
         return k, C
+
+    def get_mean_local_clustering(self):
+        C = nx.clustering(self.G)
+        return np.mean(C.values())
 
 
 if __name__=="__main__":
