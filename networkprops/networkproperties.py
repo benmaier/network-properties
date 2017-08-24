@@ -39,6 +39,7 @@ class networkprops(object):
         self.sigma_for_eigs = 1e-10
 
         #self.get_eigenratio()        
+        self.mean_degree = mean(np.array([d[1] for d in G.degree()],dtype=float))
 
 
     def calculate_all(self):
@@ -65,6 +66,34 @@ class networkprops(object):
         res = array(num_of_second_neighs)
 
         return res, self.get_mean_and_err(res)
+
+    def mean_over_neighbors(self,func):
+        """ func must be a function of the node """
+        obs = 0.
+        for n in G.nodes():
+            kn = G.degree(n)
+            for u in G.neighbors(n):
+                if u != n:
+                    obs += func(u) / float(kn)
+        return obs
+
+    def mean_over_unique_second_neighbors(self,func):
+        """ func must be a function of the node """
+        obs = 0.
+        for n in G.nodes():
+            first_neighbors = set(G.neighbors(n)) + { n }
+            for u in first_neighbors:
+                if u != n:
+                    for v in G.neighbors(u):
+                        if v not in first_neighbors:
+                            #obs += 
+                            pass
+
+    #def mean_over_non_unique_second_neighbors(self,func):
+
+
+
+
 
     def get_laplacian(self):
         if not hasattr(self,"laplacian"):
