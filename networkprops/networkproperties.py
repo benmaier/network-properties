@@ -42,6 +42,7 @@ class networkprops(object):
         self.mean_degree = mean(np.array([d[1] for d in G.degree()],dtype=float))
 
 
+
     def calculate_all(self):
         pass
 
@@ -92,6 +93,21 @@ class networkprops(object):
     #def mean_over_non_unique_second_neighbors(self,func):
 
 
+    def get_random_walk_eigenvalue_gap(self):
+
+        W = self.get_adjacency_matrix().copy()
+        for c in range(W.shape[1]):
+            W.data[W.indptr[c]:W.indptr[c+1]] /= float(self.G.degree(c))
+
+        lambda_max,_ = sprs.linalg.eigs(W,k=3,which='LM',maxiter=self.maxiter)
+        lambda_max = np.abs(lambda_max)
+        print lambda_max
+        ind_zero = argmax(lambda_max)
+        lambda_1 = lambda_max[ind_zero]
+        lambda_max2 = delete(lambda_max,ind_zero)
+        lambda_2 = max(lambda_max2)
+
+        return lambda_1.real - lambda_2.real
 
 
 
@@ -456,7 +472,7 @@ class networkprops(object):
             return j_max[0]
 
     def get_degree_distribution(self,k_min=0):
-        degrees = self.G.degree().values()
+        degrees = [ d[1] for d in self.G.degree() ]
         dist = Counter(degrees)
         k_min = 0
         k_max = max(degrees)
@@ -466,15 +482,38 @@ class networkprops(object):
         return ks,vals
 
     def get_clustering_by_degree(self,get_mean_by_degree=False):
-        deg = self.G.degree().values()
         C_ = nx.clustering(self.G)
-        k = zeros((self.N,))
-        C = zeros((self.N,))
-        for i,node in enumerate(self.G.nodes()):
-            k[i] = deg[node]
-            C[i] = C_[node]
+        if not get_mean_by_degree:
+            k = zeros((self.N,))
+            C = zeros((self.N,))
+            for i,node in enumerate(self.G.nodes()):
+                k[i] = self.G.degree(node)
+                C[i] = C_[node]
 
-        return k, C
+            return k, C
+        if get_mean_by_degree:
+            degrees = [ d[1] for d in self.G.degree() ]
+            dist = Counter(degrees)
+            k_max = max(degrees)
+            C_c = Counter()
+             
+            for node in self.G.nodes():
+                k = self.G.degree(node)
+                C_c[k] += C_[node]
+
+            ks = []
+            Cs = []
+
+            for k in range(2,k_max+1):
+                if dist[k] > 0: 
+                    ks.append(k)
+                    C_c[k] /= float(dist[k])
+                    Cs.append(C_c[k])
+
+            return np.array(ks), np.array(Cs)
+
+
+
 
     def get_mean_local_clustering(self):
         C = nx.clustering(self.G)
