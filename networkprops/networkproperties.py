@@ -1,3 +1,4 @@
+
 import networkx as nx
 import scipy.sparse as sprs
 from numpy import *
@@ -101,7 +102,6 @@ class networkprops(object):
 
         lambda_max,_ = sprs.linalg.eigs(W,k=3,which='LM',maxiter=self.maxiter)
         lambda_max = np.abs(lambda_max)
-        print lambda_max
         ind_zero = argmax(lambda_max)
         lambda_1 = lambda_max[ind_zero]
         lambda_max2 = delete(lambda_max,ind_zero)
@@ -323,8 +323,8 @@ class networkprops(object):
 
         if build_mean_over_two_point_values:
             R = 0.
-            for source in xrange(self.N-1):
-                for target in xrange(source+1,self.N):
+            for source in range(self.N-1):
+                for target in range(source+1,self.N):
                     if source != target:
                         R += self.get_effective_resistance(source,target,lambda_inv=lambda_inv,mu=mu)
 
@@ -342,7 +342,7 @@ class networkprops(object):
 
             mean_tau = 0.
 
-            for target in xrange(self.N): 
+            for target in range(self.N): 
                 tau = self.get_mean_first_passage_times_inverse_method(target,L,A,k)
 
                 mean_tau += tau.sum()
@@ -395,8 +395,8 @@ class networkprops(object):
 
     def get_path_lengths(self):
         if not hasattr(self,"shortest_path_lenghts") or self.shortest_path_lenghts is None:
-            self.shortest_paths_lengths = nx.all_pairs_shortest_path_length(self.G)
-            self.avg_shortest_path = sum([ length for sp in self.shortest_paths_lengths.values() for length in sp.values() ])/float(self.N*(self.N-1))
+            self.shortest_paths_lengths = dict(nx.all_pairs_shortest_path_length(self.G))
+            self.avg_shortest_path = sum([ length for sp in list(self.shortest_paths_lengths.values()) for length in list(sp.values()) ])/float(self.N*(self.N-1))
             self.eccentricity = nx.eccentricity(self.G,sp=self.shortest_paths_lengths)
             self.diameter = nx.diameter(self.G,e=self.eccentricity)
             self.radius = nx.radius(self.G,e=self.eccentricity)
@@ -430,10 +430,11 @@ class networkprops(object):
     def get_betweenness_centrality(self):
         
         if not hasattr(self, "betweenness_centrality") or self.betweenness_centrality is None:
-            self.betweenness_centrality = nx.betweenness_centrality(self.G)
-            self.max_B = max(self.betweenness_centrality.values())
-            self.min_B = min(self.betweenness_centrality.values())
-            self.mean_B,self.mean_B_err = self.get_mean_and_err(self.betweenness_centrality.values())
+            self.betweenness_centrality = dict(nx.betweenness_centrality(self.G))
+            val = np.array(list(self.betweenness_centrality.values()))
+            self.max_B = max(val)
+            self.min_B = min(val)
+            self.mean_B,self.mean_B_err = self.get_mean_and_err(val)
 
         return self.betweenness_centrality, self.mean_B,self.mean_B_err
 
@@ -461,8 +462,7 @@ class networkprops(object):
             elif mode=="mutualistic":
                 stab_ana.fill_jacobian_mutualistic()
             else: 
-                print "Mode",mode,"not known."
-                sys.exit(1)
+                raise ValueError("Mode",mode,"not known.")
 
             j_max[meas] = stab_ana.get_largest_realpart_eigenvalue()
 
@@ -517,13 +517,12 @@ class networkprops(object):
 
     def get_mean_local_clustering(self):
         C = nx.clustering(self.G)
-        return np.mean(C.values())
+        return np.mean(list(C.values()))
 
 
 if __name__=="__main__":
     import mhrn
     import pylab as pl
-    import seaborn as sns
     from nwDiff import ErgodicDiffusion
 
     test_stability = False
@@ -555,13 +554,13 @@ if __name__=="__main__":
     if test_stability:
 
         jmax,jerr = nprops.stability_analysis(0.15,10,tol=1e-2)
-        print jmax, jerr
+        print(jmax, jerr)
 
         jmax,jerr = nprops.stability_analysis(0.15,10,mode="mutualistic",tol=1e-2)
-        print jmax, jerr
+        print(jmax, jerr)
 
         jmax,jerr = nprops.stability_analysis(0.15,10,mode="predatorprey",maxiter=20000,tol=1e-2)
-        print jmax, jerr
+        print(jmax, jerr)
 
     if test_mean_tau:
         r, h = 3, 3 
@@ -569,28 +568,28 @@ if __name__=="__main__":
         props = networkprops(G)
 
         tau = props.get_mean_mean_first_passage_time(use_inverse_method=True)
-        print "inverse laplacian method mean tau =", tau
+        print("inverse laplacian method mean tau =", tau)
 
         tau = props.get_mean_effective_resistance()
-        print "tree laplacian eigenvalue method mean tau =", tau
+        print("tree laplacian eigenvalue method mean tau =", tau)
 
         tau = props.get_mean_mean_first_passage_time()
-        print "general laplacian eigenvalue method mean tau =", tau
+        print("general laplacian eigenvalue method mean tau =", tau)
 
         diff = ErgodicDiffusion(G)
 
         N_meas = 10
         tau = 0.
-        for meas in xrange(N_meas):
+        for meas in range(N_meas):
             MFPT, coverage_time = diff.simulate_for_MFPT_and_coverage_time()
             #fig,ax = pl.subplots(1,1)
             #ax.hist(MFPT.flatten(),bins=np.arange(min(MFPT.flatten()), max(MFPT.flatten()) + 5, 5))
             tau += diff.get_mean_MFPT()
         tau /= N_meas
 
-        print "simulated mean tau =", tau
+        print("simulated mean tau =", tau)
 
-        print "mean effective resistance (over two point) =", props.get_mean_effective_resistance(build_mean_over_two_point_values=True)
+        print("mean effective resistance (over two point) =", props.get_mean_effective_resistance(build_mean_over_two_point_values=True))
 
 
     pl.show()
