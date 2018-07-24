@@ -281,7 +281,7 @@ class networkprops(object):
 
         return tau
 
-    def get_mean_first_passage_times_for_all_targets_eigenvalue_method(self):
+    def get_mean_first_passage_times_for_all_targets_eigenvalue_method(self,use_stationary_distribution=False):
         k = np.array(self.get_adjacency_matrix().sum(axis=1)).ravel()
         lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
         lambdas = lambdas[1:]
@@ -291,8 +291,14 @@ class networkprops(object):
         mu = mus.T[1:,:]
         lambda_inv = 1./lambdas
 
+        if not use_stationary_distribution:
+            corrective_factor = self.N / (self.N - 1)
+        else:
+            print("corrected")
+            corrective_factor = 2*self.m / (2*self.m - k)
+
         # Eq. (14) from https://arxiv.org/pdf/1209.6165v1.pdf
-        T = self.N/(self.N-1.) * lambda_inv.dot( 2*self.m * mu**2 - mu*( mu.dot(k)[:,None] ) )
+        T = corrective_factor * lambda_inv.dot( 2*self.m * mu**2 - mu*( mu.dot(k)[:,None] ) )
 
         return T
 
@@ -371,7 +377,10 @@ class networkprops(object):
             return lambda_inv.sum() / (self.N-1.)
 
         
-    def get_mean_mean_first_passage_time(self,use_inverse_method=False):
+    def get_mean_mean_first_passage_time(self,use_inverse_method=False,use_stationary_distribution=False):
+
+        if use_inverse_method and use_stationary_distribution:
+            raise ValueError('Cannot combine "use_stationary_distribution = True" and "use_inverse_method = True",.')
 
         if use_inverse_method:
             L = self.get_laplacian()
@@ -392,7 +401,7 @@ class networkprops(object):
             return mean_tau
         else:
             # This is a mean over all pairs. However, every pair has been counted twice
-            return np.mean(self.get_mean_first_passage_times_for_all_targets_eigenvalue_method())
+            return np.mean(self.get_mean_first_passage_times_for_all_targets_eigenvalue_method(use_stationary_distribution))
 
     def get_eigenvalues(self,with_eigenvectors=False):
 
