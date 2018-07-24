@@ -293,14 +293,49 @@ class networkprops(object):
 
         return T
 
+    def get_global_mean_first_passage_times_from_stationary_state(self,P_stationary=None):
+        """Eqs. (2) and (3) from Lin, et al., Mean first-passage time for random walks in general graphs with a deep trap, (2012)"""
+
+        k = np.array(self.get_adjacency_matrix().sum(axis=1)).ravel()
+
+        if P_stationary is None:
+            P_stationary = k / 2.0 / self.m
+
+        R = np.zeros((self.N, self.N))
+        for source in range(self.N-1):
+            for target in range(source+1,self.N):
+                R[source, target] = self.get_effective_resistance(source, target)
+
+        R += R.T
+
+        T_global = np.zeros((self.N,))
+
+        for target in range(self.N):
+            T = np.zeros((self.N,))
+            for source in range(self.N):
+                if target == source:
+                    continue
+                T[source] = 0.5 * np.sum([ k[z] * (R[source, target] + R[target, z] - R[source, z])\
+                                           for z in range(self.N) ])
+            mean_T = np.dot(P_stationary, T)
+            T_global[target] = mean_T
+
+        return T_global
+
+
     def get_effective_resistance(self,source,target,mu=None,lambda_inv=None):
 
-        if mu is None and lambda_inv is None:
+        if mu is None or lambda_inv is None:
 
-            # get eigenvalues and eigenvectors
-            lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
+            if self.laplacian_eigenvectors is None or self.laplacian_eigenvalues is None:
+
+                # get eigenvalues and eigenvectors
+                lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
+            else:
+                lambdas = self.laplacian_eigenvalues
+                mus = self.laplacian_eigenvectors
+
             lambdas = lambdas[1:]
-
             # put eigenvectors as row vectors and disregard the first one
             # (corresponding to eigenvalue 0)
             mu = mus.T[1:,:]
