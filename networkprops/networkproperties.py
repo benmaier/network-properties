@@ -320,7 +320,7 @@ class networkprops(object):
                     continue
                 T[source] = 0.5 * np.sum([ k[z] * (R[source, target] + R[target, z] - R[source, z])\
                                            for z in range(self.N) ])
-            mean_T = np.dot(P_stationary, T)
+            mean_T = np.dot(P_stationary, T) / (1 - P_stationary[target])
             T_global[target] = mean_T
 
         return T_global
