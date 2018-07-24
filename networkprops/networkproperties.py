@@ -42,6 +42,9 @@ class networkprops(object):
         #self.get_eigenratio()        
         self.mean_degree = mean(np.array([d[1] for d in G.degree()],dtype=float))
 
+        self.laplacian_eigenvalues = None
+        self.laplacian_eigenvectors = None
+
 
 
     def calculate_all(self):
@@ -326,8 +329,8 @@ class networkprops(object):
     def get_effective_resistance(self,source,target,mu=None,lambda_inv=None):
 
         if mu is None or lambda_inv is None:
-
-            if self.laplacian_eigenvectors is None or self.laplacian_eigenvalues is None:
+            if not hasattr(self,"laplacian_eigenvalues") or self.laplacian_eigenvalues is None or\
+               not hasattr(self,"laplacian_eigenvectors") or self.laplacian_eigenvectors is None:
 
                 # get eigenvalues and eigenvectors
                 lambdas, mus = self.get_laplacian_eigenvalues(with_eigenvectors=True)
