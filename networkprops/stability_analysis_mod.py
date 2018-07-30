@@ -10,12 +10,21 @@ from numpy.random import normal
 class stability_analysis(object):
 
     def __init__(self,A,sigma,self_interaction=1.,mixing_gauss_delta=1.,maxiter=None,tol=-1.):
+        """
+        Takes a network, computes
+        """
 
         if not mixing_gauss_delta==1.:
             print("mixing not yet implemented!")
             sys.exit(1)
 
-        self.A = A.tolil()
+        if type(A) == tuple:
+            N, row, col = A
+            data = np.ones_like(row)
+            self.A = sprs.coo_matrix((data,(row,col)), shape=(N,N))
+        else:
+            self.A = A.tocoo()
+
         self.N = self.A.shape[0]
         self.node_indices = arange(self.N)
 
@@ -104,9 +113,17 @@ class stability_analysis(object):
             if tol<0.:
                 tol = self.tol
 
-            j_large,_ = sprs.linalg.eigs(self.J,k=2,which='LR',maxiter=maxiter,tol=tol)
+            j_large = sprs.linalg.eigs(self.J,k=2,which='LR',maxiter=maxiter,tol=tol,return_eigenvectors=False)
             self.j_max = max(real(j_large))
 
         return self.j_max
 
 
+if __name__ == "__main__":
+    import cMHRN
+
+    A = cMHRN.fast_mhrn_coord_lists(8,3,7,8,use_giant_component=True)
+
+    stab = stability_analysis(A,sigma=2)
+    stab.fill_jacobian_predator_prey()
+    print(stab.get_largest_realpart_eigenvalue())
