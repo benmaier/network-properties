@@ -20,7 +20,7 @@ class stability_analysis(object):
 
         if type(A) == tuple:
             N, row, col = A
-            data = np.ones_like(row)
+            data = ones_like(row)
             self.A = sprs.coo_matrix((data,(row,col)), shape=(N,N))
         else:
             self.A = A.tocoo()
