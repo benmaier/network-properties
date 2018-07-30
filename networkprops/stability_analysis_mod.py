@@ -66,15 +66,16 @@ class stability_analysis(object):
         lower_triangle = nonzero(row>col)[0]
 
         #print(len(upper_triangle), len(lower_triangle))
-        signs = 2 * bernoulli.rvs(0.5, size=len(upper_triangle)) - 1
+        #signs = 2 * bernoulli.rvs(0.5, size=len(upper_triangle)) - 1
         #print(len(signs), len(np.where(signs>0)[0]))
+        data[upper_triangle] = normal(scale=self.sigma,size=len(upper_triangle))
+        J = sprs.csr_matrix((data,(row,col)),dtype=float)
 
-        data[upper_triangle] = signs * abs(normal(scale=self.sigma,size=len(upper_triangle)))
-        data[lower_triangle] = - signs * abs(normal(scale=self.sigma,size=len(lower_triangle)))
+        signs = array([ - sign(J[col[ndx],row[ndx]]) for ndx in lower_triangle ])
+        data[lower_triangle] = signs * abs(normal(scale=self.sigma,size=len(lower_triangle)))
 
-        self.J = sprs.csc_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N)
+        self.J = sprs.csc_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N,dtype=float)
         
-
         self.j_max = None
 
     def fill_jacobian_mutualistic(self):
@@ -129,4 +130,16 @@ if __name__ == "__main__":
 
     stab = stability_analysis(A,sigma=0.3)
     stab.fill_jacobian_predator_prey()
+
+    I, J = nonzero(stab.J)
+    ndcs = arange(len(I))
+    random.shuffle(ndcs)
+    print(ndcs[:50])
+
+    for ndx in ndcs[:50]:
+        i = I[ndx]
+        j = J[ndx]
+
+        print(stab.J[i,j], stab.J[j,i])
+
     print(stab.get_largest_realpart_eigenvalue())
