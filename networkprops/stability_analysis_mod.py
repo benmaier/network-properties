@@ -5,6 +5,7 @@ from numpy import *
 import sys
 import scipy.sparse as sprs
 from numpy.random import normal
+from scipy.stats import bernoulli
 
 
 class stability_analysis(object):
@@ -50,11 +51,9 @@ class stability_analysis(object):
         data = normal(scale=self.sigma,size=len(row)) 
 
         J = sprs.csr_matrix((data,(row,col)),dtype=float).tolil()
-        J[self.node_indices,self.node_indices] = -1.
+        J[self.node_indices,self.node_indices] = -self.self_interaction
 
-        self.J = J.tocsr()
-
-        del J
+        self.J = J
 
         self.j_max = None
 
@@ -66,8 +65,12 @@ class stability_analysis(object):
         upper_triangle = nonzero(row<col)[0]
         lower_triangle = nonzero(row>col)[0]
 
-        data[upper_triangle] = abs(normal(scale=self.sigma,size=len(upper_triangle)))
-        data[lower_triangle] = -abs(normal(scale=self.sigma,size=len(lower_triangle)))
+        #print(len(upper_triangle), len(lower_triangle))
+        signs = 2 * bernoulli.rvs(0.5, size=len(upper_triangle)) - 1
+        #print(len(signs), len(np.where(signs>0)[0]))
+
+        data[upper_triangle] = signs * abs(normal(scale=self.sigma,size=len(upper_triangle)))
+        data[lower_triangle] = - signs * abs(normal(scale=self.sigma,size=len(lower_triangle)))
 
         self.J = sprs.csc_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N)
         
@@ -83,9 +86,9 @@ class stability_analysis(object):
         lower_triangle = nonzero(row>col)[0]
 
         data[upper_triangle] = normal(scale=self.sigma,size=len(upper_triangle))
-        self.J = sprs.csr_matrix((data,(row,col)),dtype=float)
+        J = sprs.csr_matrix((data,(row,col)),dtype=float)
 
-        signs = array([ sign(self.J[col[ndx],row[ndx]]) for ndx in lower_triangle ])
+        signs = array([ sign(J[col[ndx],row[ndx]]) for ndx in lower_triangle ])
         data[lower_triangle] = signs * abs(normal(scale=self.sigma,size=len(lower_triangle)))
 
         self.J = sprs.csr_matrix((data,(row,col)),dtype=float) - self.self_interaction * sprs.eye(self.N,dtype=float)
@@ -124,6 +127,6 @@ if __name__ == "__main__":
 
     A = cMHRN.fast_mhrn_coord_lists(8,3,7,8,use_giant_component=True)
 
-    stab = stability_analysis(A,sigma=2)
+    stab = stability_analysis(A,sigma=0.3)
     stab.fill_jacobian_predator_prey()
     print(stab.get_largest_realpart_eigenvalue())
