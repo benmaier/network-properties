@@ -97,20 +97,24 @@ class networkprops(object):
     #def mean_over_non_unique_second_neighbors(self,func):
 
 
-    def get_random_walk_eigenvalue_gap(self):
+    def get_random_walk_eigenvalue_gap(self,return_for_frobenius_norm=False):
 
         W = self.get_adjacency_matrix().copy()
         for c in range(W.shape[1]):
             W.data[W.indptr[c]:W.indptr[c+1]] /= float(self.G.degree(c))
 
-        lambda_max,_ = sprs.linalg.eigs(W,k=3,which='LM',maxiter=self.maxiter)
+        lambda_max,_ = sprs.linalg.eigs(W,k=3,which='LR',maxiter=self.maxiter)
         lambda_max = np.abs(lambda_max)
         ind_zero = argmax(lambda_max)
         lambda_1 = lambda_max[ind_zero]
         lambda_max2 = delete(lambda_max,ind_zero)
         lambda_2 = max(lambda_max2)
 
-        return lambda_1.real - lambda_2.real
+        if not return_for_frobenius_norm:
+            return lambda_1.real - lambda_2.real
+        else:
+            return -np.log(lambda_2.real)
+
 
 
 
